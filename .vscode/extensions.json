@@ -1,0 +1,20 @@
+{
+  "recommendations": [
+    "ms-ceintl.vscode-language-pack-zh-hans",
+    "visualstudioexptteam.vscodeintellicode",
+    "xabikos.javascriptsnippets",
+    "dsznajder.es7-react-js-snippets",
+    "donjayamanne.githistory",
+    "eamodio.gitlens",
+    "esbenp.prettier-vscode",
+    "stylelint.vscode-stylelint",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "codezombiech.gitignore",
+    "aaron-bond.better-comments",
+    "jasonnutter.search-node-modules",
+    "jock.svg",
+    "mikestead.dotenv",
+    "vscode-icons-team.vscode-icons"
+  ]
+}
