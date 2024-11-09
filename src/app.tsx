@@ -1,34 +1,57 @@
+import 'mapbox-gl/dist/mapbox-gl.css';
+import '@ttfn/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import './app.css';
-import * as ort from 'onnxruntime-web';
-import { useEffect } from 'react';
-import image from '/canvas-image.png';
-
-ort.env.debug = false;
-// set global logging level
-ort.env.logLevel = 'verbose';
-
-// override path of wasm files - for each file
-ort.env.wasm.numThreads = 2;
-// ort.env.wasm.simd = true;
-// ort.env.wasm.proxy = true;
-
-ort.env.wasm.wasmPaths = 'model/';
-const UPLOAD_IMAGE_SIZE = 1024;
-const EMBEDDINGS_GENERATOR_ENDPOINT = 'https://model-zoo.metademolab.com/predictions/segment_everything_box_model';
-// Load the model and create InferenceSession
-// Load and preprocess the input image to inputTensor
-const session = await ort.InferenceSession.create('model/interactive_module_quantized_592547_2023_03_19_sam6_long_uncertain.onnx');
+import { useEffect, useRef, useState } from 'react';
+// import image from '/canvas-image.png';
+// import image from './a.png';
+import { segmentAnythingModel, SegmentAnythingModelReturnType } from './segment';
+import { GeoJSONSource, Map } from 'mapbox-gl';
+import { polygon } from '@turf/turf';
+import { genMap } from './map';
+import type { FeatureCollection } from 'geojson';
 
 function App() {
+  const [map, setMap] = useState<Map>();
+  const [state, setState] = useState<{ state: 'loading' | 'loaded' | 'error'; model: SegmentAnythingModelReturnType }>();
+  const imageRef = useRef<HTMLImageElement>(null);
+  // const onClick = async () => {
+  //   if (!map) return;
+  //   const canvas = map.getCanvas();
+  //   const ctx = canvas.getContext('2d');
+  //   if (!ctx) return;
+  //   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  //   const tensor = await segmentAnythingModel(imageData);
+  //   console.log(tensor);
+  // };
   useEffect(() => {
-    const init = async () => {
-      // Run inference
-      const outputs = await session.run({ input: inputTensor });
-      console.log(outputs);
-    };
-    init();
+    (async () => {
+      const mapCtrl = genMap();
+      setMap(mapCtrl.map);
+      const model = await segmentAnythingModel();
+      console.log('Segment Anything Model Loaded');
+      setState({ state: 'loaded', model });
+      mapCtrl.map.on('click', async (e) => {
+        const rect = e.target.getCanvas().getBoundingClientRect();
+        const res = await model.getInferenceMasks(e.target.getCanvas(), rect.width, rect.height, [{ type: 0, point: e.point }]);
+        if (Array.isArray(res)) {
+          const poly = polygon(res.map((mask) => mask.map((point) => e.target.unproject(point).toArray())));
+          const source = e.target.getSource('SEGMENT') as GeoJSONSource;
+          const data = source._data as FeatureCollection;
+          data.features.push(poly);
+          source.setData(data);
+        }
+      });
+    })();
   }, []);
-  return <img src={image} />;
+  return (
+    <>
+      {/* <button style={{ position: 'absolute', top: 0, left: 0 }} onClick={onClick}>
+        分析
+      </button> */}
+      {/* <img src={image} ref={imageRef} /> */}
+      <div id="map" style={{ width: '100%', height: '100%' }}></div>
+    </>
+  );
 }
 
 export default App;
